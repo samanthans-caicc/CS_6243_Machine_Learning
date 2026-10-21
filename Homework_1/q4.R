@@ -42,7 +42,7 @@ print(table_storage)
 K_break_even <- (Sfull - 784) / 19398
 cat("Break-even rank K =", K_break_even, "\n")
 png("fig4.png")
-plot(Kset, SLR, type = "l", xlab = "K", ylab = "Storage (scalars)", main = "Storage vs K")
+plot(Kset, SLR, type = "l", xlab = "K", ylab = "Storage (scalars)", main = "Storage vs K",  ylim = c(0, max(SLR, Sfull)))
 abline(h = Sfull, lty = "dashed", col = "red")
 legend("topright", legend = c("SLR", "Sfull"), col = c("black", "red"), lty = c(1, 2))
 dev.off()
