@@ -43,6 +43,8 @@ table2 <- data.frame(
   reps       = sapply(cmp_times, length),
   row.names  = NULL
 )
+# Report note: runtimes vary slightly between runs; state which run the reported
+# medians came from (individual timings are saved to timings_problem6.csv).
 cat("\nTable 2 (runtimes in microseconds; exclude preprocessing and SVD):\n")
 print(table2, digits = 5)
 

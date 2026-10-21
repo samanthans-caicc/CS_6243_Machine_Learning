@@ -54,6 +54,9 @@ names(bls_c) <- paste0("c=", c_set)
 plot_bls_panels("fig5_bls_c.png", bls_c, paste("c =", c_set),
                 bls_cols[c(1, 3)], "BLS, beta = 0.5")
 
+# Report note: with this data the two settings are NOT identical (final gaps
+# ~6.2e-4 for c = 0.01 vs ~1.1e-4 for c = 0.1), so discuss the difference
+# rather than the "identical results" case.
 cat("\nIdentical accepted steps for c = 0.01 and c = 0.1?",
     isTRUE(all.equal(bls_c[[1]]$gam, bls_c[[2]]$gam)), "\n")
 # Why they can match: for a quadratic, the trial is accepted iff
@@ -69,6 +72,8 @@ cat("Armijo thresholds (first 5), c=0.01:", signif(thr(bls_c[[1]], 0.01)[1:5], 4
 cat("Armijo thresholds (first 5), c=0.1 :", signif(thr(bls_c[[2]], 0.1)[1:5], 4), "\n")
 
 # ---- Task 3: Table 1 (distinct settings; (0.1, 0.5) appears once) ----
+# Report note: runtimes vary slightly between runs, so state which run the
+# reported medians came from (the IQR column shows the variability).
 settings <- unique(rbind(data.frame(c = 0.1, beta = beta_set),
                          data.frame(c = c_set, beta = 0.5)))
 table1 <- do.call(rbind, lapply(seq_len(nrow(settings)), function(i) {

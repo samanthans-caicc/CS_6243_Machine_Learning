@@ -98,6 +98,8 @@ grad_path <- function(run) apply(run$X, 2, function(x) sqrt(sum(g_fun(x)^2))) # 
 
 # Wall-clock timing: one untimed warm-up, then n_rep timed runs.
 # Sys.time() has microsecond resolution on Linux (R's analogue of perf_counter).
+# Report note: say Sys.time() was used in place of time.perf_counter(); both are
+# wall-clock timers.
 n_rep <- 21
 time_runs <- function(run_fun, n_rep_ = n_rep) {
   invisible(run_fun())                      # warm-up
