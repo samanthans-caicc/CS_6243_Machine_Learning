@@ -18,18 +18,18 @@ cmp_gap   <- sapply(cmp_runs, obj_path) - L_opt     # 30 x 3, raw values
 # Log scale: gaps that are zero or slightly negative from roundoff cannot be
 # drawn, so ONLY for plotting they are clipped to a floor of
 # eps * L_opt (the roundoff level of L). Tables use the raw values.
+# The floor (~8e-15) is far below the smallest gap reached, so it is not drawn.
 gap_floor <- .Machine$double.eps * L_opt
 gap_plot  <- pmax(cmp_gap, gap_floor)
 cat("\nNumber of gap values clipped for plotting:", sum(cmp_gap < gap_floor), "\n")
 
 cmp_cols <- c("#d95f02", "blue", "#7570b3")
 png("fig6_comparison.png", width = 1600, height = 1100, res = 200)
+par(mar = c(5, 5, 4, 2))   # wider left margin so the y-axis label is not cut off
 matplot(1:n_iter, gap_plot, type = "l", lty = 1, lwd = 2, col = cmp_cols, log = "y",
         xlab = "Iteration n", ylab = expression(L(x[n]) - L[opt] ~ "(log scale)"),
         main = "Fig. 6: Objective gap of the three GD methods")
-abline(h = gap_floor, lty = 3, col = "grey40")
-legend("topright", legend = c(names(cmp), "plot floor (eps * L_opt)"),
-       col = c(cmp_cols, "grey40"), lty = c(1, 1, 1, 3), lwd = 2, bty = "n")
+legend("topright", legend = names(cmp), col = cmp_cols, lty = 1, lwd = 2, bty = "n")
 dev.off()
 
 # ---- Task 2: Table 2 ----
