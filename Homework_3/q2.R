@@ -4,11 +4,12 @@
 # poly_features(x, d)
 #   - columns x^0, x^1, ..., x^d
 #   - note in the report which orientation you used (HW writes (d+1) x n)
+# Orientation used: n x (d+1) (one row per sample) = transpose of the HW's
+# (d+1) x n. outer() always returns a matrix, even when d = 0 or n = 1.
 poly_features <- function(x, d) {
-  sapply(0:d, function(power) x^power)
-  # Return the matrix with columns x^0, x^1, ..., x^d
+  outer(as.numeric(x), 0:d, "^")
 }
- 
+
 # Column (row, in HW notation) standardizer
 #   - skip the bias column
 #   - skip any column with sd = 0
@@ -16,15 +17,23 @@ poly_features <- function(x, d) {
 standardize_poly <- function(X_train, X_test) {
   X_train <- as.matrix(X_train)
   X_test <- as.matrix(X_test)
-  n <- nrow(X_train)
   mu <- colMeans(X_train)
-  sigma <- apply(X_train, 2, function(column) sqrt(mean((column - mu[col(column)])^2)))
-  standardize_column <- sigma > 0
+  # Population sd (divide by n) of each column
+  sigma <- apply(X_train, 2, function(column) sqrt(mean((column - mean(column))^2)))
 
-  X_train <- X_train
-  X_test <- X_test
-  X_train[, standardize_column] <- (X_train[, standardize_column] - mu[standardize_column]) / sigma[standardize_column]
-  X_test[, standardize_column] <- (X_test[, standardize_column] - mu[standardize_column]) / sigma[standardize_column]
+  # Skip the bias column (column 1) explicitly, and any constant column (sd = 0)
+  standardize_column <- sigma > 0
+  standardize_column[1] <- FALSE
+  cols <- which(standardize_column)
+
+  # sweep() subtracts/divides each column by ITS OWN mu/sigma.
+  # (Plain X - mu would recycle mu down the rows, which is wrong.)
+  if (length(cols) > 0) {
+    X_train[, cols] <- sweep(sweep(X_train[, cols, drop = FALSE], 2, mu[cols], "-"),
+                             2, sigma[cols], "/")
+    X_test[, cols]  <- sweep(sweep(X_test[, cols, drop = FALSE], 2, mu[cols], "-"),
+                             2, sigma[cols], "/")
+  }
 
   list(
     X_train = X_train,
@@ -34,28 +43,28 @@ standardize_poly <- function(X_train, X_test) {
     standardize_column = standardize_column
   )
 }
- 
+
 # solve_LS(X, y) via SVD
-#   - take the SVD of X
-#   - drop singular values below a tolerance (report the tolerance you use)
-#   - w = V * D^-1 * U^T * y
+# X = U D V^T  =>  w = V D^-1 U^T y  (pseudo-inverse solution)
+# Tolerance: singular values <= max(n, p) * max(d) * eps are treated as zero
+# (same default rule as numpy.linalg.pinv / MATLAB pinv).
 solve_LS <- function(X, y) {
-  svd_result <- svd(X)
-  tolerance <- max(dim(X)) * max(svd_result$d) * .Machine$double.eps
-  keep <- svd_result$d > tolerance
-  svd_result$u[, keep, drop = FALSE] %*%
-    (svd_result$v[, keep, drop = FALSE] %*%
-     (t(svd_result$u[, keep, drop = FALSE]) %*% y / svd_result$d[keep]))
+  X <- as.matrix(X)
+  y <- as.numeric(y)
+  s <- svd(X)
+  tolerance <- max(dim(X)) * max(s$d) * .Machine$double.eps
+  keep <- s$d > tolerance
+  U <- s$u[, keep, drop = FALSE]
+  V <- s$v[, keep, drop = FALSE]
+  V %*% ((t(U) %*% y) / s$d[keep])   # (p x 1) weight vector
 }
- 
+
 # mse(yhat, y) - mean squared error in ORIGINAL y units
 mse <- function(yhat, y) {
   mean((yhat - y)^2)
-
 }
- 
+
 # Core pipeline (reused in Problems 2, 4, 5):
-#   given a train/test split and degree d:
 #   standardize x -> build poly features -> standardize columns
 #   -> solve LS -> return train MSE, test MSE, w (and stats if needed)
 fit_poly <- function(x_train, y_train, x_test, y_test, d) {
@@ -73,17 +82,3 @@ fit_poly <- function(x_train, y_train, x_test, y_test, d) {
     poly_stats = poly_stats
   )
 }
- 
-# Task 2.1: Fig. 1 - standardized x_train vs y_train (train_size = 5000).
-# Task 2.2: train_size = 5000, loop d in {1,2,3,4,5,10,15,20}; table of
-#           train/test MSE.
-# Task 2.3: Fig. 2 - train MSE (blue) and test MSE (red) vs d.
-# Task 2.4: d = 9, loop train_size in {1000,3000,5000,7000,10000};
-#           RE-SPLIT each time so all stats are recomputed. Table.
-# Task 2.5: Fig. 3 - test MSE vs train_size (d = 9).
-# Task 2.6: Fig. 4 - d = 9, train_size = 5000: scatter (blue) + fitted
-#           curve (red). Sort by x_train before drawing the line.
-# Task 2.7: Discussion - data shape, MSE vs d, MSE vs train size,
-#           under/overfitting, quality of the d = 9 fit.
- 
- 
