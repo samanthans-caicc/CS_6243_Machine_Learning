@@ -60,8 +60,10 @@ solve_LS <- function(X, y) {
 }
 
 # mse(yhat, y) - mean squared error in ORIGINAL y units
+# as.numeric() on both: X %*% w is an n x 1 matrix, and y from numpy is a
+# 1-D array, which R refuses to subtract from a matrix.
 mse <- function(yhat, y) {
-  mean((yhat - y)^2)
+  mean((as.numeric(yhat) - as.numeric(y))^2)
 }
 
 # Core pipeline (reused in Problems 2, 4, 5):
@@ -82,3 +84,76 @@ fit_poly <- function(x_train, y_train, x_test, y_test, d) {
     poly_stats = poly_stats
   )
 }
+library(ggplot2)
+
+# Task 2.1: Fig. 1 - standardized x_train vs y_train (train_size = 5000)
+split_5000 <- split_data(5000)
+z_5000 <- standardize(split_5000$x_train, split_5000$x_test)
+fig1 <- ggplot(data.frame(x = z_5000$train, y = split_5000$y_train), aes(x = x, y = y)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  labs(x = "MedInc (standardized, unitless)",
+       y = "Median house value ($100k)",
+       title = "Fig. 1: Training data, standardized MedInc vs house value (train_size = 5000)")
+ggsave("fig1_standardized_scatter.png", fig1, width = 6.5, height = 4.5, dpi = 150)
+
+# Task 2.2: train/test MSE vs degree d (train_size = 5000)
+d_values <- c(1, 2, 3, 4, 5, 10, 15, 20)
+mse_vs_d <- data.frame(d = d_values, t(sapply(d_values, function(d) {
+  fit <- fit_poly(split_5000$x_train, split_5000$y_train,
+                  split_5000$x_test, split_5000$y_test, d)
+  c(train_mse = fit$train_mse, test_mse = fit$test_mse)
+})))
+cat("Problem 2 - MSE vs degree d (train_size = 5000), units ($100k)^2:\n")
+print(transform(mse_vs_d, train_mse = round(train_mse, 4), test_mse = round(test_mse, 4)))
+
+# Task 2.3: Fig. 2 - train (blue) and test (red) MSE vs d
+mse_d_long <- data.frame(d = rep(d_values, 2),
+                         set = rep(c("Train", "Test"), each = length(d_values)),
+                         mse = c(mse_vs_d$train_mse, mse_vs_d$test_mse))
+fig2 <- ggplot(mse_d_long, aes(x = d, y = mse, colour = set)) +
+  geom_line() +
+  geom_point() +
+  scale_colour_manual(values = c(Train = "blue", Test = "red")) +
+  scale_x_continuous(breaks = d_values) +
+  labs(x = "Polynomial degree d", y = "MSE (($100k)^2)", colour = NULL,
+       title = "Fig. 2: Train and test MSE vs degree (train_size = 5000)")
+ggsave("fig2_mse_vs_degree.png", fig2, width = 6.5, height = 4.5, dpi = 150)
+
+# Task 2.4: d = 9, nested training sizes. fit_poly recomputes all training
+#           statistics (mu_x, sigma_x, mu_k, sigma_k) for each split.
+n_values <- c(1000, 3000, 5000, 7000, 10000)
+mse_vs_n <- data.frame(train_size = n_values, t(sapply(n_values, function(n) {
+  s <- split_data(n)
+  fit <- fit_poly(s$x_train, s$y_train, s$x_test, s$y_test, 9)
+  c(train_mse = fit$train_mse, test_mse = fit$test_mse)
+})))
+cat("\nProblem 2 - MSE vs training size (d = 9), units ($100k)^2:\n")
+print(transform(mse_vs_n, train_mse = round(train_mse, 4), test_mse = round(test_mse, 4)))
+
+# Task 2.5: Fig. 3 - test MSE vs training size (d = 9)
+fig3 <- ggplot(mse_vs_n, aes(x = train_size, y = test_mse)) +
+  geom_line(colour = "red") +
+  geom_point(colour = "red") +
+  scale_x_continuous(breaks = n_values) +
+  labs(x = "Training set size (samples)", y = "Test MSE (($100k)^2)",
+       title = "Fig. 3: Test MSE vs training size (d = 9)")
+ggsave("fig3_test_mse_vs_n.png", fig3, width = 6.5, height = 4.5, dpi = 150)
+
+# Task 2.6: Fig. 4 - d = 9 fit over the training scatter, sorted by x_train.
+#           Fitted values are X_poly w on the training set itself.
+fit_d9 <- fit_poly(split_5000$x_train, split_5000$y_train,
+                   split_5000$x_test, split_5000$y_test, 9)
+order_x <- order(z_5000$train)
+curve_df <- data.frame(x = z_5000$train[order_x],
+                       y = as.numeric(fit_d9$poly_stats$X_train %*% fit_d9$w)[order_x])
+fig4 <- ggplot() +
+  geom_point(data = data.frame(x = z_5000$train, y = split_5000$y_train),
+             aes(x = x, y = y, colour = "Training data"), alpha = 0.3, size = 0.8) +
+  geom_line(data = curve_df, aes(x = x, y = y, colour = "Degree-9 fit"), linewidth = 1) +
+  scale_colour_manual(values = c("Training data" = "blue", "Degree-9 fit" = "red")) +
+  labs(x = "MedInc (standardized, unitless)", y = "Median house value ($100k)",
+       colour = NULL, title = "Fig. 4: Degree-9 polynomial fit (train_size = 5000)") +
+  theme(legend.position = "top")
+ggsave("fig4_degree9_fit.png", fig4, width = 6.5, height = 4.5, dpi = 150)
+
+# Task 2.7: Discussion of Figs. 1-4 goes in the report.

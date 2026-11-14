@@ -44,3 +44,25 @@ standardize <- function(train, test) {
 # Task 1.2: Fig. 0 - side-by-side scatter (train_size = 5000):
 #           left = raw x vs y, right = standardized x vs y. Label axes + units.
  
+
+library(ggplot2)
+
+# Fig. 0 - one data frame holding both panels; facet_wrap puts them side by
+# side with their own x-axis (raw MedInc vs standardized MedInc).
+fig0_split <- split_data(5000)
+fig0_z <- standardize(fig0_split$x_train, fig0_split$x_test)
+fig0_df <- data.frame(
+  panel = factor(rep(c("Unstandardized: MedInc ($10k)",
+                       "Standardized: MedInc (unitless)"), each = 5000),
+                 levels = c("Unstandardized: MedInc ($10k)",
+                            "Standardized: MedInc (unitless)")),
+  x = c(fig0_split$x_train, fig0_z$train),
+  y = rep(fig0_split$y_train, 2)
+)
+fig0 <- ggplot(fig0_df, aes(x = x, y = y)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  facet_wrap(~ panel, ncol = 2, scales = "free_x") +
+  labs(x = "Median income (MedInc)",
+       y = "Median house value ($100k)",
+       title = "Fig. 0: Training data, raw vs standardized MedInc (train_size = 5000)")
+ggsave("fig0_raw_vs_standardized.png", fig0, width = 9, height = 4.5, dpi = 150)
